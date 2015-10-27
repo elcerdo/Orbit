@@ -46,8 +46,8 @@ public class MainRenderer implements Renderer {
             "uniform mat4 uProjection;" +
             "varying vec4 vPosition;" +
             "void main() {" +
-            "  vPosition = uProjection*uModelView*aPosition;" +
-            "  gl_Position = vPosition;" +
+            "  vPosition = aPosition;" +
+            "  gl_Position = uProjection*uModelView*vPosition;" +
             "}";
     private String fragmentShaderCode =
             "precision highp float;" +
@@ -57,8 +57,7 @@ public class MainRenderer implements Renderer {
             "varying vec4 vPosition;" +
             "void main() {" +
             "  if (uMode==1) {" +
-            //"    float phase = uTime-6*atan(vPosition.y, vPosition.x);" +
-            "    float phase = uTime;" +
+            "    float phase = 6.2831*.5*(uTime+atan(vPosition.y, vPosition.x));" +
             "    gl_FragColor = vec4(fract(phase),1,0,1);" +
             "    return;" +
             "  }" +
