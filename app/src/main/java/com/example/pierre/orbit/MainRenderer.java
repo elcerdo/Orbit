@@ -46,8 +46,8 @@ public class MainRenderer implements Renderer {
             "uniform mat4 uProjection;" +
             "varying vec4 vPosition;" +
             "void main() {" +
-            "  vPosition = aPosition;" +
-            "  gl_Position = uProjection*uModelView*vPosition;" +
+            "  vPosition = uModelView*aPosition;" +
+            "  gl_Position = uProjection*vPosition;" +
             "}";
     private String fragmentShaderCode =
             "precision highp float;" +
