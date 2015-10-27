@@ -17,11 +17,11 @@ public class MainActivity extends Activity implements View.OnTouchListener {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        Log.i("Orbit", "creating activity.");
+        Log.i("Orbit", "create activity");
         ActivityManager activityManager = (ActivityManager)getSystemService(Context.ACTIVITY_SERVICE);
         ConfigurationInfo info = activityManager.getDeviceConfigurationInfo();
         if (info.reqGlEsVersion < 0x20000) {
-            Log.e("Orbit", "your device doesn't support opengl es 2.");
+            Log.e("Orbit", "your device doesn't support opengl es 2");
             return;
         }
 

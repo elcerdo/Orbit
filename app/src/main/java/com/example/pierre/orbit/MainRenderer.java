@@ -4,6 +4,7 @@ package com.example.pierre.orbit;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView.Renderer;
 import android.opengl.GLU;
+import android.opengl.Matrix;
 import android.util.Log;
 
 import java.nio.ByteBuffer;
@@ -14,21 +15,35 @@ import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
 public class MainRenderer implements Renderer {
-    private FloatBuffer verticesBuffer;
+    private FloatBuffer verticesBufferSquare;
+    private FloatBuffer verticesBufferArrow;
 
-    private float vertices[] = {
+    private float verticesArraySquare[] = {
       -1,-1,0,1,
       1,-1,0,1,
       1,1,0,1,
       -1,1,0,1,
     };
 
+    private float verticesArrayArrow[] = {
+      1,0,0,1,
+      .9f,.1f,0,1,
+      .9f,.05f,0,1,
+      0,.05f,0,1,
+      0,-.05f,0,1,
+      .9f,-.05f,0,1,
+      .9f,-.1f,0,1,
+    };
+
     public int counter;
 
     private String vertexShaderCode =
+            "precision highp float;" +
             "attribute vec4 vPosition;" +
+            "uniform mat4 uModelView;" +
+            "uniform mat4 uProjection;" +
             "void main() {" +
-            "  gl_Position = mat4(.5,0,0,0, 0,.5,0,0, 0,0,1,0, 0,0,0,1)*vPosition;" +
+            "  gl_Position = uProjection*uModelView*vPosition;" +
             "}";
     private String fragmentShaderCode =
             "precision highp float;" +
@@ -38,6 +53,15 @@ public class MainRenderer implements Renderer {
             "}";
     private int programId;
 
+
+    public static FloatBuffer arrayToBuffer(float array[]) {
+        ByteBuffer byte_buffer = ByteBuffer.allocateDirect(array.length * 4);
+        byte_buffer.order(ByteOrder.nativeOrder());
+        FloatBuffer float_buffer = byte_buffer.asFloatBuffer();
+        float_buffer.put(array);
+        float_buffer.position(0);
+        return float_buffer;
+    }
 
     public static int loadShader(int type, String code) {
         int shaderId = GLES20.glCreateShader(type);
@@ -50,8 +74,15 @@ public class MainRenderer implements Renderer {
     public static boolean logStatus() {
         int error = GLES20.glGetError();
         if (error == GLES20.GL_NO_ERROR) return true;
-        Log.e("Orbit", "ERROR " + GLU.gluErrorString(error));
+        Log.e("Orbit", "STATUS ERROR " + GLU.gluErrorString(error));
         return false;
+    }
+
+    MainRenderer() {
+        Log.i("Orbit", "create renderer");
+        counter = 2;
+        verticesBufferSquare = arrayToBuffer(verticesArraySquare);
+        verticesBufferArrow = arrayToBuffer(verticesArrayArrow);
     }
 
     @Override
@@ -65,27 +96,50 @@ public class MainRenderer implements Renderer {
 
         int position_attrib = GLES20.glGetAttribLocation(programId, "vPosition");
         int color_uniform = GLES20.glGetUniformLocation(programId, "uColor");
+        int model_view_uniform = GLES20.glGetUniformLocation(programId, "uModelView");
+        assert( position_attrib >= 0 );
+        assert( color_uniform >= 0 );
+        assert( model_view_uniform >= 0 );
 
-        GLES20.glUniform4f(color_uniform, counter%3 == 0 ? 1.f : 0.f, counter%3 == 1 ? 1.f : 0.f, counter %3 == 2 ? 1.f : 0.f, 1.f);
+        float model_view_matrix[] = new float[16];
+        Matrix.setIdentityM(model_view_matrix, 0);
+        Matrix.scaleM(model_view_matrix, 0, .5f, .5f, 1.f);
+        GLES20.glUniformMatrix4fv(model_view_uniform, 1, false, model_view_matrix, 0);
+
+        GLES20.glUniform4f(color_uniform, counter % 3 == 0 ? 1.f : 0.f, counter % 3 == 1 ? 1.f : 0.f, counter % 3 == 2 ? 1.f : 0.f, 1.f);
 
         GLES20.glEnableVertexAttribArray(position_attrib);
-        GLES20.glVertexAttribPointer(position_attrib, 4, GLES20.GL_FLOAT, false, 0, verticesBuffer);
+        GLES20.glVertexAttribPointer(position_attrib, 4, GLES20.GL_FLOAT, false, 0, verticesBufferSquare);
         GLES20.glDrawArrays(GLES20.GL_TRIANGLE_FAN, 0, 4);
+        GLES20.glDisableVertexAttribArray(position_attrib);
+
+        Matrix.translateM(model_view_matrix, 0, -1f,-1f,0f);
+        Matrix.scaleM(model_view_matrix, 0, 2f, 2f, 1f);
+        GLES20.glUniformMatrix4fv(model_view_uniform, 1, false, model_view_matrix, 0);
+
+        GLES20.glUniform4f(color_uniform, 1f,0f,0f,1f);
+
+        GLES20.glEnableVertexAttribArray(position_attrib);
+        GLES20.glVertexAttribPointer(position_attrib, 4, GLES20.GL_FLOAT, false, 0, verticesBufferArrow);
+        GLES20.glDrawArrays(GLES20.GL_TRIANGLE_FAN, 0, 7);
+        GLES20.glDisableVertexAttribArray(position_attrib);
+
+        Matrix.rotateM(model_view_matrix, 0, 90f, 0f,0f,1f);
+        GLES20.glUniformMatrix4fv(model_view_uniform, 1, false, model_view_matrix, 0);
+
+        GLES20.glUniform4f(color_uniform, 0f,1f,0f,1f);
+
+        GLES20.glEnableVertexAttribArray(position_attrib);
+        GLES20.glVertexAttribPointer(position_attrib, 4, GLES20.GL_FLOAT, false, 0, verticesBufferArrow);
+        GLES20.glDrawArrays(GLES20.GL_TRIANGLE_FAN, 0, 7);
         GLES20.glDisableVertexAttribArray(position_attrib);
 
         logStatus();
     }
     @Override
     public void onSurfaceCreated(GL10 foo, EGLConfig config) {
-        Log.i("Orbit", "surfaceCreated");
+        Log.i("Orbit", "create surface");
 
-        {
-            ByteBuffer vertices_bytes_buffer = ByteBuffer.allocateDirect(vertices.length * 4);
-            vertices_bytes_buffer.order(ByteOrder.nativeOrder());
-            verticesBuffer = vertices_bytes_buffer.asFloatBuffer();
-            verticesBuffer.put(vertices);
-            verticesBuffer.position(0);
-        }
 
         {
             int vertex_shader_id = loadShader(GLES20.GL_VERTEX_SHADER, vertexShaderCode);
@@ -97,11 +151,22 @@ public class MainRenderer implements Renderer {
             GLES20.glLinkProgram(programId);
         }
 
-        counter = 2;
         logStatus();
     }
     @Override
-    public void onSurfaceChanged(GL10 foo, int aa, int bb) {
+    public void onSurfaceChanged(GL10 foo, int width, int height) {
+        Log.i("Orbit", String.format("surface changed %d %d", width, height));
 
+        GLES20.glUseProgram(programId);
+
+        int projection_uniform = GLES20.glGetUniformLocation(programId, "uProjection");
+        assert( projection_uniform >= 0 );
+
+        float projection_matrix[] = new float[16];
+        float mx = width/(float)Math.min(height, width);
+        float my = height/(float)Math.min(height, width);
+        Matrix.orthoM(projection_matrix, 0, -mx,mx,-my,my,-1,1);
+
+        GLES20.glUniformMatrix4fv(projection_uniform, 1, false, projection_matrix, 0);
     }
 }
