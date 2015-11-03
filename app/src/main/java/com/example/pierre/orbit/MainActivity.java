@@ -25,7 +25,7 @@ public class MainActivity extends Activity implements View.OnTouchListener {
             return;
         }
 
-        mainRenderer = new MainRenderer();
+        mainRenderer = new MainRenderer(this);
         mainSurfaceView = new MainSurfaceView(this);
 
         mainSurfaceView.setEGLContextClientVersion(2);

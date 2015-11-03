@@ -1,5 +1,7 @@
 package com.example.pierre.orbit;
 
+import android.content.Context;
+import android.content.res.Resources;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView.Renderer;
 import android.opengl.GLU;
@@ -29,42 +31,18 @@ public class MainRenderer implements Renderer {
     private float verticesArrayArrow[] = {
       1,0,0,1,
       .9f,.1f,0,1,
-      .9f,.05f,0,1,
-      0,.05f,0,1,
-      0,-.05f,0,1,
-      .9f,-.05f,0,1,
+      .9f,.03f,0,1,
+      0,.03f,0,1,
+      0,-.03f,0,1,
+      .9f,-.03f,0,1,
       .9f,-.1f,0,1,
     };
 
     public int counter;
     private long start_time;
 
-    private String vertexShaderCode =
-            "precision highp float;" +
-            "attribute vec4 aPosition;" +
-            "uniform mat4 uModelView;" +
-            "uniform mat4 uProjection;" +
-            "varying vec4 vPosition;" +
-            "void main() {" +
-            "  vPosition = uModelView*aPosition;" +
-            "  gl_Position = uProjection*vPosition;" +
-            "}";
-    private String fragmentShaderCode =
-            "precision highp float;" +
-            "uniform vec4 uColor;" +
-            "uniform int uMode;" +
-            "uniform float uTime;" +
-            "varying vec4 vPosition;" +
-            "void main() {" +
-            "  if (uMode==1) {" +
-            "    float phase = 6.2831*.5*(uTime+atan(vPosition.y, vPosition.x));" +
-            "    gl_FragColor = vec4(fract(phase),1,0,1);" +
-            "    return;" +
-            "  }" +
-            "  gl_FragColor = uColor;" +
-            "}";
     private int programId;
-
+    private Context context;
 
     public static FloatBuffer arrayToBuffer(float array[]) {
         ByteBuffer byte_buffer = ByteBuffer.allocateDirect(array.length * 4);
@@ -100,32 +78,30 @@ public class MainRenderer implements Renderer {
         GLES20.glCompileShader(shaderId);
         int isCompiled[] = new int[1];
         GLES20.glGetShaderiv(shaderId, GLES20.GL_COMPILE_STATUS, isCompiled, 0);
-        if(isCompiled[0] == GLES20.GL_FALSE) Log.e("Orbit", "COMPILE ERROR " + GLES20.glGetShaderInfoLog(shaderId));
+        if(isCompiled[0] == GLES20.GL_FALSE) throw new RuntimeException("SHADER COMPILE ERROR " + GLES20.glGetShaderInfoLog(shaderId));
         return shaderId;
     }
 
-    public static boolean logStatus() {
+    public static void assertStatus() {
         int error = GLES20.glGetError();
-        if (error == GLES20.GL_NO_ERROR) return true;
-        Log.e("Orbit", "STATUS ERROR " + GLU.gluErrorString(error));
-        return false;
+        if (error != GLES20.GL_NO_ERROR) throw new RuntimeException("OPENGL STATUS ERROR " + GLU.gluErrorString(error));
     }
 
-    MainRenderer() {
+    MainRenderer(Context _context) {
         Log.i("Orbit", "create renderer");
         counter = 2;
         verticesBufferSquare = arrayToBuffer(verticesArraySquare);
         verticesBufferArrow = arrayToBuffer(verticesArrayArrow);
         verticesBufferCircle = circleBuffer(256);
         start_time = System.currentTimeMillis();
-        Log.i("Orbit", ""+verticesBufferCircle.capacity()/4);
+        context = _context;
     }
 
     @Override
     public void onDrawFrame(GL10 foo) {
-        if (GLES20.glGetError() != GLES20.GL_NO_ERROR) return;
+        assertStatus();
 
-        GLES20.glClearColor(1,1,1,1);
+        GLES20.glClearColor(1, 1, 1, 1);
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT | GLES20.GL_DEPTH_BUFFER_BIT);
         GLES20.glLineWidth(20f);
 
@@ -136,72 +112,83 @@ public class MainRenderer implements Renderer {
         int model_view_uniform = GLES20.glGetUniformLocation(programId, "uModelView");
         int time_uniform = GLES20.glGetUniformLocation(programId, "uTime");
         int mode_uniform = GLES20.glGetUniformLocation(programId, "uMode");
-        assert( position_attrib >= 0 );
-        assert( color_uniform >= 0 );
-        assert( model_view_uniform >= 0 );
-        assert( time_uniform >= 0 );
-        assert( mode_uniform >= 0 );
+        assert (position_attrib >= 0);
+        assert (color_uniform >= 0);
+        assert (model_view_uniform >= 0);
+        assert (time_uniform >= 0);
+        assert (mode_uniform >= 0);
 
-        float current_time = (System.currentTimeMillis()-start_time)/1000f;
+        float current_time = (System.currentTimeMillis() - start_time) / 1000f;
         GLES20.glUniform1f(time_uniform, current_time);
         GLES20.glUniform1i(mode_uniform, 0);
 
         float model_view_matrix[] = new float[16];
-        Matrix.setIdentityM(model_view_matrix, 0);
-        Matrix.scaleM(model_view_matrix, 0, .5f, .5f, 1.f);
-        GLES20.glUniformMatrix4fv(model_view_uniform, 1, false, model_view_matrix, 0);
 
-        GLES20.glUniform4f(color_uniform, counter % 3 == 0 ? 1.f : 0.f, counter % 3 == 1 ? 1.f : 0.f, counter % 3 == 2 ? 1.f : 0.f, 1.f);
+        { // circle
+            Matrix.setIdentityM(model_view_matrix, 0);
+            Matrix.scaleM(model_view_matrix, 0, .5f, .5f, 1.f);
+            GLES20.glUniformMatrix4fv(model_view_uniform, 1, false, model_view_matrix, 0);
 
-        GLES20.glEnableVertexAttribArray(position_attrib);
-        //GLES20.glVertexAttribPointer(position_attrib, 4, GLES20.GL_FLOAT, false, 0, verticesBufferSquare);
-        //GLES20.glDrawArrays(GLES20.GL_TRIANGLE_FAN, 0, verticesBufferSquare.capacity()/4);
-        GLES20.glVertexAttribPointer(position_attrib, 4, GLES20.GL_FLOAT, false, 0, verticesBufferCircle);
-        GLES20.glDrawArrays(GLES20.GL_TRIANGLE_FAN, 0, verticesBufferCircle.capacity()/4);
-        GLES20.glDisableVertexAttribArray(position_attrib);
+            GLES20.glUniform4f(color_uniform, counter % 3 == 0 ? 1.f : 0.f, counter % 3 == 1 ? 1.f : 0.f, counter % 3 == 2 ? 1.f : 0.f, 1.f);
 
-        Matrix.translateM(model_view_matrix, 0, -1f,-1f,0f);
-        Matrix.scaleM(model_view_matrix, 0, 2f, 2f, 1f);
-        GLES20.glUniformMatrix4fv(model_view_uniform, 1, false, model_view_matrix, 0);
+            GLES20.glEnableVertexAttribArray(position_attrib);
+            //GLES20.glVertexAttribPointer(position_attrib, 4, GLES20.GL_FLOAT, false, 0, verticesBufferSquare);
+            //GLES20.glDrawArrays(GLES20.GL_TRIANGLE_FAN, 0, verticesBufferSquare.capacity()/4);
+            GLES20.glVertexAttribPointer(position_attrib, 4, GLES20.GL_FLOAT, false, 0, verticesBufferCircle);
+            GLES20.glDrawArrays(GLES20.GL_TRIANGLE_FAN, 0, verticesBufferCircle.capacity() / 4);
+            GLES20.glDisableVertexAttribArray(position_attrib);
+        }
 
-        GLES20.glUniform4f(color_uniform, 1f,0f,0f,1f);
+        { // x arrow
+            Matrix.scaleM(model_view_matrix, 0, 2f, 2f, 1f);
+            Matrix.translateM(model_view_matrix, 0, -.5f, 0f, 0f);
+            GLES20.glUniformMatrix4fv(model_view_uniform, 1, false, model_view_matrix, 0);
 
-        GLES20.glEnableVertexAttribArray(position_attrib);
-        GLES20.glVertexAttribPointer(position_attrib, 4, GLES20.GL_FLOAT, false, 0, verticesBufferArrow);
-        GLES20.glDrawArrays(GLES20.GL_TRIANGLE_FAN, 0, verticesBufferArrow.capacity()/4);
-        GLES20.glDisableVertexAttribArray(position_attrib);
+            GLES20.glUniform4f(color_uniform, 0f, 1f, 1f, 1f);
 
-        Matrix.rotateM(model_view_matrix, 0, 90f, 0f,0f,1f);
-        GLES20.glUniformMatrix4fv(model_view_uniform, 1, false, model_view_matrix, 0);
+            GLES20.glEnableVertexAttribArray(position_attrib);
+            GLES20.glVertexAttribPointer(position_attrib, 4, GLES20.GL_FLOAT, false, 0, verticesBufferArrow);
+            GLES20.glDrawArrays(GLES20.GL_TRIANGLE_FAN, 0, verticesBufferArrow.capacity() / 4);
+            GLES20.glDisableVertexAttribArray(position_attrib);
+        }
 
-        GLES20.glUniform4f(color_uniform, 0f,1f,0f,1f);
+        { // y arrow
+            Matrix.translateM(model_view_matrix, 0, .5f, -.5f, 0f);
+            Matrix.rotateM(model_view_matrix, 0, 90f, 0f, 0f, 1f);
+            GLES20.glUniformMatrix4fv(model_view_uniform, 1, false, model_view_matrix, 0);
 
-        GLES20.glEnableVertexAttribArray(position_attrib);
-        GLES20.glVertexAttribPointer(position_attrib, 4, GLES20.GL_FLOAT, false, 0, verticesBufferArrow);
-        GLES20.glDrawArrays(GLES20.GL_TRIANGLE_FAN, 0, verticesBufferArrow.capacity()/4);
-        GLES20.glDisableVertexAttribArray(position_attrib);
+            GLES20.glUniform4f(color_uniform, 1f, 0f, 1f, 1f);
 
-        Matrix.setIdentityM(model_view_matrix, 0);
-        GLES20.glUniformMatrix4fv(model_view_uniform, 1, false, model_view_matrix, 0);
+            GLES20.glEnableVertexAttribArray(position_attrib);
+            GLES20.glVertexAttribPointer(position_attrib, 4, GLES20.GL_FLOAT, false, 0, verticesBufferArrow);
+            GLES20.glDrawArrays(GLES20.GL_TRIANGLE_FAN, 0, verticesBufferArrow.capacity() / 4);
+            GLES20.glDisableVertexAttribArray(position_attrib);
+        }
 
-        GLES20.glUniform4f(color_uniform, 0f,0f,0f,1f);
-        GLES20.glUniform1i(mode_uniform, 1);
+        { // orbit
+            Matrix.setIdentityM(model_view_matrix, 0);
+            GLES20.glUniformMatrix4fv(model_view_uniform, 1, false, model_view_matrix, 0);
 
-        GLES20.glEnableVertexAttribArray(position_attrib);
-        GLES20.glVertexAttribPointer(position_attrib, 4, GLES20.GL_FLOAT, false, 0, verticesBufferCircle);
-        GLES20.glDrawArrays(GLES20.GL_POINTS, 1, verticesBufferCircle.capacity()/4 - 1);
-        GLES20.glDisableVertexAttribArray(position_attrib);
+            GLES20.glUniform4f(color_uniform, 0f, 0f, 0f, 1f);
+            GLES20.glUniform1i(mode_uniform, 1);
 
-        logStatus();
+            GLES20.glEnableVertexAttribArray(position_attrib);
+            GLES20.glVertexAttribPointer(position_attrib, 4, GLES20.GL_FLOAT, false, 0, verticesBufferCircle);
+            GLES20.glDrawArrays(GLES20.GL_POINTS, 1, verticesBufferCircle.capacity() / 4 - 1);
+            GLES20.glDisableVertexAttribArray(position_attrib);
+        }
+
+        assertStatus();
     }
+
     @Override
     public void onSurfaceCreated(GL10 foo, EGLConfig config) {
         Log.i("Orbit", "create surface");
 
 
         {
-            int vertex_shader_id = loadShader(GLES20.GL_VERTEX_SHADER, vertexShaderCode);
-            int fragment_shader_id = loadShader(GLES20.GL_FRAGMENT_SHADER, fragmentShaderCode);
+            int vertex_shader_id = loadShader(GLES20.GL_VERTEX_SHADER, context.getResources().getString(R.string.vertex_shader));
+            int fragment_shader_id = loadShader(GLES20.GL_FRAGMENT_SHADER, context.getResources().getString(R.string.fragment_shader));
 
             programId = GLES20.glCreateProgram();
             GLES20.glAttachShader(programId, vertex_shader_id);
@@ -209,7 +196,7 @@ public class MainRenderer implements Renderer {
             GLES20.glLinkProgram(programId);
         }
 
-        logStatus();
+        assertStatus();
     }
     @Override
     public void onSurfaceChanged(GL10 foo, int width, int height) {
