@@ -40,10 +40,15 @@ public class MainRenderer extends GestureDetector.SimpleOnGestureListener implem
     };
 
     public int counter;
-    private long start_time;
+    private long startTime;
 
     private int programId;
     private Context context;
+
+    private int width;
+    private int height;
+    private float sx;
+    private float sy;
 
     public static FloatBuffer arrayToBuffer(float array[]) {
         ByteBuffer byte_buffer = ByteBuffer.allocateDirect(array.length * 4);
@@ -91,17 +96,23 @@ public class MainRenderer extends GestureDetector.SimpleOnGestureListener implem
     MainRenderer(Context context_) {
         Log.i("Orbit", "create renderer");
         counter = 2;
+        width = height = -1;
+        sx = sy = 0;
         verticesBufferSquare = arrayToBuffer(verticesArraySquare);
         verticesBufferArrow = arrayToBuffer(verticesArrayArrow);
         verticesBufferCircle = circleBuffer(256);
-        start_time = System.currentTimeMillis();
+        startTime = System.currentTimeMillis();
         context = context_;
     }
 
     @Override
     public boolean onSingleTapUp(MotionEvent evt) {
         counter ++;
-        Log.i("Orbit", "prout prout " + counter + " " + evt.getX() + "/" + evt.getY()   );
+        GLES20.glUseProgram(programId);
+        assert( width > 0 && height > 0 );
+        sx = (2*evt.getX()-width)/(float)Math.min(height, width);
+        sy = (height-2*evt.getY())/(float)Math.min(height, width);
+        Log.i("Orbit", "prout prout " + counter + " " + sx + "/" + sy);
         return true;
     }
 
@@ -120,20 +131,23 @@ public class MainRenderer extends GestureDetector.SimpleOnGestureListener implem
         int model_view_uniform = GLES20.glGetUniformLocation(programId, "uModelView");
         int time_uniform = GLES20.glGetUniformLocation(programId, "uTime");
         int mode_uniform = GLES20.glGetUniformLocation(programId, "uMode");
-        assert (position_attrib >= 0);
-        assert (color_uniform >= 0);
-        assert (model_view_uniform >= 0);
-        assert (time_uniform >= 0);
-        assert (mode_uniform >= 0);
+        int tap_uniform = GLES20.glGetUniformLocation(programId, "uTap");
+        assert( position_attrib >= 0 );
+        assert( color_uniform >= 0 );
+        assert( model_view_uniform >= 0 );
+        assert( time_uniform >= 0 );
+        assert( mode_uniform >= 0 );
+        assert( tap_uniform >= 0 );
 
-        float current_time = (System.currentTimeMillis() - start_time) / 1000f;
+        float current_time = (System.currentTimeMillis() - startTime) / 1000f;
         GLES20.glUniform1f(time_uniform, current_time);
         GLES20.glUniform1i(mode_uniform, 0);
+        GLES20.glUniform2f(tap_uniform, sx, sy);
 
         float model_view_matrix[] = new float[16];
         Matrix.setIdentityM(model_view_matrix, 0);
+        Matrix.translateM(model_view_matrix, 0, sx, sy, 0f);
         Matrix.scaleM(model_view_matrix, 0, .5f, .5f, 1.f);
-
 
         { // circle
             GLES20.glUniformMatrix4fv(model_view_uniform, 1, false, model_view_matrix, 0);
@@ -207,20 +221,26 @@ public class MainRenderer extends GestureDetector.SimpleOnGestureListener implem
         assertStatus();
     }
     @Override
-    public void onSurfaceChanged(GL10 foo, int width, int height) {
+    public void onSurfaceChanged(GL10 foo, int width_, int height_) {
+        width = width_;
+        height = height_;
+
         Log.i("Orbit", String.format("surface changed %d %d", width, height));
         GLES20.glViewport(0, 0, width, height);
 
         GLES20.glUseProgram(programId);
 
         int projection_uniform = GLES20.glGetUniformLocation(programId, "uProjection");
+        int size_uniform = GLES20.glGetUniformLocation(programId, "uSize");
         assert( projection_uniform >= 0 );
+        assert( size_uniform >= 0 );
 
         float projection_matrix[] = new float[16];
         float mx = width/(float)Math.min(height, width);
         float my = height/(float)Math.min(height, width);
         Matrix.orthoM(projection_matrix, 0, -mx,mx,-my,my,-1,1);
-
         GLES20.glUniformMatrix4fv(projection_uniform, 1, false, projection_matrix, 0);
+
+        GLES20.glUniform2f(size_uniform, width, height);
     }
 }

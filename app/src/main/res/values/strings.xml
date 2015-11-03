@@ -13,14 +13,16 @@
     </string>
     <string name="fragment_shader">
         precision highp float;
+        uniform mat4 uProjection;
         uniform vec4 uColor;
         uniform int uMode;
         uniform float uTime;
         varying vec4 vPosition;
+        uniform vec2 uTap;
         void main() {
             if (uMode==1) {
                 float phase = 6.2831*.5*(uTime+atan(vPosition.y, vPosition.x));
-                gl_FragColor = vec4(fract(phase),1,0,1);
+                gl_FragColor = vec4(fract(phase),fract(uTap.x+uTime),fract(uTap.y+1.53*uTime),1);
                 return;
             }
             gl_FragColor = uColor;
