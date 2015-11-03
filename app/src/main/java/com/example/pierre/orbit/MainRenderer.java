@@ -1,12 +1,13 @@
 package com.example.pierre.orbit;
 
 import android.content.Context;
-import android.content.res.Resources;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView.Renderer;
 import android.opengl.GLU;
 import android.opengl.Matrix;
 import android.util.Log;
+import android.view.GestureDetector;
+import android.view.MotionEvent;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -16,7 +17,7 @@ import java.util.Timer;
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
-public class MainRenderer implements Renderer {
+public class MainRenderer extends GestureDetector.SimpleOnGestureListener implements Renderer {
     private FloatBuffer verticesBufferSquare;
     private FloatBuffer verticesBufferArrow;
     private FloatBuffer verticesBufferCircle;
@@ -87,14 +88,21 @@ public class MainRenderer implements Renderer {
         if (error != GLES20.GL_NO_ERROR) throw new RuntimeException("OPENGL STATUS ERROR " + GLU.gluErrorString(error));
     }
 
-    MainRenderer(Context _context) {
+    MainRenderer(Context context_) {
         Log.i("Orbit", "create renderer");
         counter = 2;
         verticesBufferSquare = arrayToBuffer(verticesArraySquare);
         verticesBufferArrow = arrayToBuffer(verticesArrayArrow);
         verticesBufferCircle = circleBuffer(256);
         start_time = System.currentTimeMillis();
-        context = _context;
+        context = context_;
+    }
+
+    @Override
+    public boolean onSingleTapUp(MotionEvent evt) {
+        counter ++;
+        Log.i("Orbit", "prout prout " + counter + " " + evt.getX() + "/" + evt.getY()   );
+        return true;
     }
 
     @Override
@@ -123,10 +131,11 @@ public class MainRenderer implements Renderer {
         GLES20.glUniform1i(mode_uniform, 0);
 
         float model_view_matrix[] = new float[16];
+        Matrix.setIdentityM(model_view_matrix, 0);
+        Matrix.scaleM(model_view_matrix, 0, .5f, .5f, 1.f);
+
 
         { // circle
-            Matrix.setIdentityM(model_view_matrix, 0);
-            Matrix.scaleM(model_view_matrix, 0, .5f, .5f, 1.f);
             GLES20.glUniformMatrix4fv(model_view_uniform, 1, false, model_view_matrix, 0);
 
             GLES20.glUniform4f(color_uniform, counter % 3 == 0 ? 1.f : 0.f, counter % 3 == 1 ? 1.f : 0.f, counter % 3 == 2 ? 1.f : 0.f, 1.f);
@@ -140,7 +149,6 @@ public class MainRenderer implements Renderer {
         }
 
         { // x arrow
-            Matrix.scaleM(model_view_matrix, 0, 2f, 2f, 1f);
             Matrix.translateM(model_view_matrix, 0, -.5f, 0f, 0f);
             GLES20.glUniformMatrix4fv(model_view_uniform, 1, false, model_view_matrix, 0);
 
@@ -201,6 +209,7 @@ public class MainRenderer implements Renderer {
     @Override
     public void onSurfaceChanged(GL10 foo, int width, int height) {
         Log.i("Orbit", String.format("surface changed %d %d", width, height));
+        GLES20.glViewport(0, 0, width, height);
 
         GLES20.glUseProgram(programId);
 

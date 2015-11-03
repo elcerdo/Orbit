@@ -6,12 +6,14 @@ import android.content.Context;
 import android.content.pm.ConfigurationInfo;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
 
-public class MainActivity extends Activity implements View.OnTouchListener {
+public class MainActivity extends Activity {
     private MainRenderer mainRenderer;
     private MainSurfaceView mainSurfaceView;
+    private GestureDetector gestureDetector;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -25,20 +27,26 @@ public class MainActivity extends Activity implements View.OnTouchListener {
             return;
         }
 
-        mainRenderer = new MainRenderer(this);
         mainSurfaceView = new MainSurfaceView(this);
-
+        mainSurfaceView.setSystemUiVisibility(
+            View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
+            View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION |
+            View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
+            View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
+            View.SYSTEM_UI_FLAG_FULLSCREEN |
+            View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
         mainSurfaceView.setEGLContextClientVersion(2);
-        mainSurfaceView.setRenderer(mainRenderer);
-        mainSurfaceView.setOnTouchListener(this);
         this.setContentView(mainSurfaceView);
+
+        mainRenderer = new MainRenderer(this);
+        mainSurfaceView.setRenderer(mainRenderer);
+
+        gestureDetector = new GestureDetector(this, mainRenderer);
     }
 
     @Override
-    public boolean onTouch(View view, MotionEvent evt) {
-        Log.i("Orbit", "prout");
-        mainRenderer.counter ++;
-        return false;
+    public boolean onTouchEvent(MotionEvent evt) {
+        return gestureDetector.onTouchEvent(evt);
     }
 
 }
