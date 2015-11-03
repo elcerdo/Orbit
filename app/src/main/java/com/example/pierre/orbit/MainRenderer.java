@@ -108,11 +108,14 @@ public class MainRenderer extends GestureDetector.SimpleOnGestureListener implem
     @Override
     public boolean onSingleTapUp(MotionEvent evt) {
         counter ++;
-        GLES20.glUseProgram(programId);
+        return true;
+    }
+
+    @Override
+    public boolean onScroll(MotionEvent evt0, MotionEvent evt1, float dx, float dy) {
         assert( width > 0 && height > 0 );
-        sx = (2*evt.getX()-width)/(float)Math.min(height, width);
-        sy = (height-2*evt.getY())/(float)Math.min(height, width);
-        Log.i("Orbit", "prout prout " + counter + " " + sx + "/" + sy);
+        sx -= 2*dx/(float)Math.min(height, width);
+        sy += 2*dy/(float)Math.min(height, width);
         return true;
     }
 
