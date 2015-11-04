@@ -19,7 +19,12 @@
         uniform float uTime;
         varying vec4 vPosition;
         uniform vec2 uTap;
+        uniform sampler2D texture;
         void main() {
+            if (uMode==2) {
+                gl_FragColor = texture2D(texture, vPosition.xy);
+                return;
+            }
             if (uMode==1) {
                 float phase = 6.2831*.5*(uTime+atan(vPosition.y, vPosition.x));
                 gl_FragColor = vec4(fract(phase),fract(uTap.x+uTime),fract(uTap.y+1.53*uTime),1);
