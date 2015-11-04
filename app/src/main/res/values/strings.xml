@@ -1,29 +1,55 @@
 <resources>
     <string name="app_name">Orbit</string>
-    <string name="vertex_shader">
+    <string name="orbit_vertex_shader">
         precision highp float;
         attribute vec4 aPosition;
         uniform mat4 uModelView;
         uniform mat4 uProjection;
         uniform vec3 uOrbit;
-        uniform int uMode;
         varying vec4 vPosition;
         varying float vPhase;
         void main() {
             vPhase = aPosition.z;
             vec4 position = aPosition;
             position.z = 0.;
-            /*float radius_inv = (1.+uOrbit.y*cos(vPhase-uOrbit.z))/uOrbit.x;
+            float radius_inv = (1.+uOrbit.y*cos(vPhase-uOrbit.z))/uOrbit.x;
             if (!(radius_inv>0.)) radius_inv = .001;
             position.x = cos(vPhase)/radius_inv;
-            position.y = sin(vPhase)/radius_inv;*/
+            position.y = sin(vPhase)/radius_inv;
             vPosition = uModelView*position;
             gl_Position = uProjection*vPosition;
         }
     </string>
-    <string name="fragment_shader">
+    <string name="orbit_fragment_shader">
         precision highp float;
+        uniform vec4 uColor;
+        uniform float uTime;
+        varying vec4 vPosition;
+        varying float vPhase;
+        uniform vec2 uTap;
+        void main() {
+            float phase = 6.2831*.5*uTime+vPhase;
+            gl_FragColor = vec4(fract(phase),fract(uTap.x+uTime),fract(uTap.y+1.53*uTime),1);
+            return;
+        }
+    </string>
+    <string name="main_vertex_shader">
+        precision highp float;
+        attribute vec4 aPosition;
+        uniform mat4 uModelView;
         uniform mat4 uProjection;
+        uniform vec3 uOrbit;
+        varying vec4 vPosition;
+        varying float vPhase;
+        void main() {
+            vec4 position = aPosition;
+            position.z = 0.;
+            vPosition = uModelView*position;
+            gl_Position = uProjection*vPosition;
+        }
+    </string>
+    <string name="main_fragment_shader">
+        precision highp float;
         uniform vec4 uColor;
         uniform int uMode;
         uniform float uTime;
@@ -32,13 +58,8 @@
         uniform vec2 uTap;
         uniform sampler2D texture;
         void main() {
-            if (uMode==2) {
-                gl_FragColor = texture2D(texture, vPosition.xy);
-                return;
-            }
             if (uMode==1) {
-                float phase = 6.2831*.5*uTime+vPhase;
-                gl_FragColor = vec4(fract(phase),fract(uTap.x+uTime),fract(uTap.y+1.53*uTime),1);
+                gl_FragColor = texture2D(texture, vPosition.xy);
                 return;
             }
             gl_FragColor = uColor;
