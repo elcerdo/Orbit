@@ -152,7 +152,7 @@ public class MainRenderer extends GestureDetector.SimpleOnGestureListener implem
     public void onDrawFrame(GL10 foo) {
         GLES20.glClearColor(1, 1, 1, 1);
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT | GLES20.GL_DEPTH_BUFFER_BIT);
-        GLES20.glLineWidth(20f);
+        GLES20.glLineWidth(10f);
         GLES20.glEnable(GLES20.GL_DEPTH_TEST);
 
         float current_time = (System.currentTimeMillis() - startTime) / 1000f;
@@ -166,7 +166,6 @@ public class MainRenderer extends GestureDetector.SimpleOnGestureListener implem
             int time_uniform = GLES20.glGetUniformLocation(main_program, "uTime");
             int mode_uniform = GLES20.glGetUniformLocation(main_program, "uMode");
             int tap_uniform = GLES20.glGetUniformLocation(main_program, "uTap");
-            int orbit_uniform = GLES20.glGetUniformLocation(main_program, "uOrbit");
 
             GLES20.glUniform1f(time_uniform, current_time);
             GLES20.glUniform2f(tap_uniform, sx, sy);
@@ -244,8 +243,12 @@ public class MainRenderer extends GestureDetector.SimpleOnGestureListener implem
             int tap_uniform = GLES20.glGetUniformLocation(orbit_program, "uTap");
             int orbit_uniform = GLES20.glGetUniformLocation(orbit_program, "uOrbit");
 
+            float radius = (float)Math.sqrt(sx*sx+sy*sy);
             initial_phase = (float)Math.atan2(sy, sx);
-            eccentricity = latus_rectum/(float)Math.sqrt(sx*sx+sy*sy)-1;
+            eccentricity = latus_rectum/radius-1;
+            float mu = 1;
+            float orbital_energy = (eccentricity*eccentricity-1)/latus_rectum;
+            //Log.i("Orbit", "e=" + orbital_energy);
             GLES20.glUniform1f(time_uniform, current_time);
             GLES20.glUniform2f(tap_uniform, sx, sy);
             GLES20.glUniform3f(orbit_uniform, latus_rectum, eccentricity, initial_phase);
