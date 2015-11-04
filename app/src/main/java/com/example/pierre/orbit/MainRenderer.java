@@ -72,10 +72,10 @@ public class MainRenderer extends GestureDetector.SimpleOnGestureListener implem
         float_buffer.put(0);
         float_buffer.put(1);
         for (int kk=0; kk<npts; kk++) {
-            double theta = Math.PI*2*kk/(npts-1);
+            float theta = (float)(Math.PI*2*kk)/(npts-1);
             float_buffer.put((float)Math.cos(theta));
             float_buffer.put((float)Math.sin(theta));
-            float_buffer.put(0);
+            float_buffer.put(theta);
             float_buffer.put(1);
         }
         float_buffer.position(0);
@@ -88,7 +88,11 @@ public class MainRenderer extends GestureDetector.SimpleOnGestureListener implem
         GLES20.glCompileShader(shaderId);
         int isCompiled[] = new int[1];
         GLES20.glGetShaderiv(shaderId, GLES20.GL_COMPILE_STATUS, isCompiled, 0);
-        if(isCompiled[0] == GLES20.GL_FALSE) throw new RuntimeException("SHADER COMPILE ERROR " + GLES20.glGetShaderInfoLog(shaderId));
+        if(isCompiled[0] == GLES20.GL_FALSE) {
+            String error_string = "SHADER COMPILE ERROR " + GLES20.glGetShaderInfoLog(shaderId);
+            Log.e("Orbit", error_string);
+            throw new RuntimeException(error_string);
+        }
         return shaderId;
     }
 
@@ -104,7 +108,10 @@ public class MainRenderer extends GestureDetector.SimpleOnGestureListener implem
 
     public static void assertStatus() {
         int error = GLES20.glGetError();
-        if (error != GLES20.GL_NO_ERROR) throw new RuntimeException("OPENGL STATUS ERROR " + GLU.gluErrorString(error));
+        if (error == GLES20.GL_NO_ERROR) return;
+        String error_string = "OPENGL STATUS ERROR " + GLU.gluErrorString(error);
+        Log.e("Orbit", error_string);
+        throw new RuntimeException(error_string);
     }
 
     MainRenderer(Context context_) {

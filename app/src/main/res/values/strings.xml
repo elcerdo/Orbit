@@ -6,8 +6,12 @@
         uniform mat4 uModelView;
         uniform mat4 uProjection;
         varying vec4 vPosition;
+        varying float vPhase;
         void main() {
-            vPosition = uModelView*aPosition;
+            vPhase = aPosition.z;
+            vec4 position = aPosition;
+            position.z = 0.;
+            vPosition = uModelView*position;
             gl_Position = uProjection*vPosition;
         }
     </string>
@@ -18,6 +22,7 @@
         uniform int uMode;
         uniform float uTime;
         varying vec4 vPosition;
+        varying float vPhase;
         uniform vec2 uTap;
         uniform sampler2D texture;
         void main() {
@@ -26,7 +31,7 @@
                 return;
             }
             if (uMode==1) {
-                float phase = 6.2831*.5*(uTime+atan(vPosition.y, vPosition.x));
+                float phase = 6.2831*.5*uTime+vPhase;
                 gl_FragColor = vec4(fract(phase),fract(uTap.x+uTime),fract(uTap.y+1.53*uTime),1);
                 return;
             }
