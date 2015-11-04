@@ -54,6 +54,10 @@ public class MainRenderer extends GestureDetector.SimpleOnGestureListener implem
     private float sx;
     private float sy;
 
+    private float eccentricity;
+    private float latus_rectum;
+    private float initial_phase;
+
     public static FloatBuffer arrayToBuffer(float array[]) {
         ByteBuffer byte_buffer = ByteBuffer.allocateDirect(array.length * 4);
         byte_buffer.order(ByteOrder.nativeOrder());
@@ -124,6 +128,9 @@ public class MainRenderer extends GestureDetector.SimpleOnGestureListener implem
         verticesBufferCircle = circleBuffer(256);
         startTime = System.currentTimeMillis();
         context = context_;
+        eccentricity = 0f;
+        initial_phase = 0f;
+        latus_rectum = 1f;
     }
 
     @Override
@@ -156,17 +163,20 @@ public class MainRenderer extends GestureDetector.SimpleOnGestureListener implem
         int time_uniform = GLES20.glGetUniformLocation(programId, "uTime");
         int mode_uniform = GLES20.glGetUniformLocation(programId, "uMode");
         int tap_uniform = GLES20.glGetUniformLocation(programId, "uTap");
+        int orbit_uniform = GLES20.glGetUniformLocation(programId, "uOrbit");
         assert( position_attrib >= 0 );
         assert( color_uniform >= 0 );
         assert( model_view_uniform >= 0 );
         assert( time_uniform >= 0 );
         assert( mode_uniform >= 0 );
         assert( tap_uniform >= 0 );
+        assert( orbit_uniform >= 0 );
 
         float current_time = (System.currentTimeMillis() - startTime) / 1000f;
         GLES20.glUniform1f(time_uniform, current_time);
         GLES20.glUniform1i(mode_uniform, 0);
         GLES20.glUniform2f(tap_uniform, sx, sy);
+        GLES20.glUniform3f(orbit_uniform, latus_rectum, eccentricity, initial_phase);
 
         float model_view_matrix[] = new float[16];
         Matrix.setIdentityM(model_view_matrix, 0);
