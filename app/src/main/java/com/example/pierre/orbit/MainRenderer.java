@@ -47,6 +47,7 @@ public class MainRenderer extends GestureDetector.SimpleOnGestureListener implem
 
     private int main_program;
     private int orbit_program;
+    private int button_program;
     private int textures[];
     private Context context;
 
@@ -58,6 +59,10 @@ public class MainRenderer extends GestureDetector.SimpleOnGestureListener implem
     private float eccentricity;
     private float latus_rectum;
     private float initial_phase;
+
+    private boolean turn_left;
+    private boolean turn_right;
+    private boolean burn;
 
     public static FloatBuffer arrayToBuffer(float array[]) {
         ByteBuffer byte_buffer = ByteBuffer.allocateDirect(array.length * 4);
@@ -132,6 +137,9 @@ public class MainRenderer extends GestureDetector.SimpleOnGestureListener implem
         eccentricity = 0f;
         initial_phase = 0f;
         latus_rectum = .5f;
+        turn_left = false;
+        turn_right = true;
+        burn = false;
     }
 
     @Override
@@ -154,6 +162,8 @@ public class MainRenderer extends GestureDetector.SimpleOnGestureListener implem
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT | GLES20.GL_DEPTH_BUFFER_BIT);
         GLES20.glLineWidth(10f);
         GLES20.glEnable(GLES20.GL_DEPTH_TEST);
+        GLES20.glDisable(GLES20.GL_BLEND);
+        GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
 
         float current_time = (System.currentTimeMillis() - startTime) / 1000f;
 
@@ -176,6 +186,7 @@ public class MainRenderer extends GestureDetector.SimpleOnGestureListener implem
             GLES20.glUniformMatrix4fv(model_view_uniform, 1, false, model_view_matrix, 0);
 
             { // background
+                GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textures[0]);
                 GLES20.glUniform4f(color_uniform, 0f, 0f, 0f, 1f);
                 GLES20.glUniform1i(mode_uniform, 1);
 
@@ -268,6 +279,70 @@ public class MainRenderer extends GestureDetector.SimpleOnGestureListener implem
             }
         }
 
+        GLES20.glClear(GLES20.GL_DEPTH_BUFFER_BIT);
+        GLES20.glEnable(GLES20.GL_BLEND);
+
+        {
+            GLES20.glUseProgram(button_program);
+
+            int position_attrib = GLES20.glGetAttribLocation(button_program, "aPosition");
+            int color_uniform = GLES20.glGetUniformLocation(button_program, "uColor");
+            int model_view_uniform = GLES20.glGetUniformLocation(button_program, "uModelView");
+            int mode_uniform = GLES20.glGetUniformLocation(button_program, "uMode");
+            float button_size = (float)context.getResources().getInteger(R.integer.button_size);
+
+            GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textures[1]);
+
+            float model_view_matrix[] = new float[16];
+            Matrix.setIdentityM(model_view_matrix, 0);
+            Matrix.scaleM(model_view_matrix, 0, button_size/2, button_size/2, 0f);
+            Matrix.translateM(model_view_matrix, 0, 1f, 1f, 0f);
+            GLES20.glUniformMatrix4fv(model_view_uniform, 1, false, model_view_matrix, 0);
+
+
+            { // left button
+                GLES20.glUniform1i(mode_uniform, turn_left ? 1 : 0);
+                GLES20.glUniform4f(color_uniform, 1f, 0f, 0f, 1f);
+
+                GLES20.glEnableVertexAttribArray(position_attrib);
+                GLES20.glVertexAttribPointer(position_attrib, 4, GLES20.GL_FLOAT, false, 0, verticesBufferSquare);
+                GLES20.glDrawArrays(GLES20.GL_TRIANGLE_FAN, 0, verticesBufferSquare.capacity() / 4);
+                GLES20.glDisableVertexAttribArray(position_attrib);
+            }
+
+            Matrix.translateM(model_view_matrix, 0, 2f, 0f, 0f);
+            GLES20.glUniformMatrix4fv(model_view_uniform, 1, false, model_view_matrix, 0);
+
+            { // right button
+                GLES20.glUniform1i(mode_uniform, turn_right ? 1 : 0);
+                GLES20.glUniform4f(color_uniform, 0f, 1f, 0f, 1f);
+
+
+                GLES20.glEnableVertexAttribArray(position_attrib);
+                GLES20.glVertexAttribPointer(position_attrib, 4, GLES20.GL_FLOAT, false, 0, verticesBufferSquare);
+                GLES20.glDrawArrays(GLES20.GL_TRIANGLE_FAN, 0, verticesBufferSquare.capacity() / 4);
+                GLES20.glDisableVertexAttribArray(position_attrib);
+            }
+
+            Matrix.setIdentityM(model_view_matrix, 0);
+            Matrix.translateM(model_view_matrix, 0, width, 0f, 0f);
+            Matrix.scaleM(model_view_matrix, 0, button_size/2, button_size/2, 0f);
+            Matrix.translateM(model_view_matrix, 0, -1f, 1f, 0f);
+            GLES20.glUniformMatrix4fv(model_view_uniform, 1, false, model_view_matrix, 0);
+
+            { // burn button
+                GLES20.glUniform1i(mode_uniform, burn ? 1 : 0);
+                GLES20.glUniform4f(color_uniform, 0f, 0f, 1f, 1f);
+
+
+                GLES20.glEnableVertexAttribArray(position_attrib);
+                GLES20.glVertexAttribPointer(position_attrib, 4, GLES20.GL_FLOAT, false, 0, verticesBufferSquare);
+                GLES20.glDrawArrays(GLES20.GL_TRIANGLE_FAN, 0, verticesBufferSquare.capacity() / 4);
+                GLES20.glDisableVertexAttribArray(position_attrib);
+            }
+        }
+
+
         assertStatus();
     }
 
@@ -276,9 +351,10 @@ public class MainRenderer extends GestureDetector.SimpleOnGestureListener implem
         Log.i("Orbit", "create surface");
 
         { // texture
-            textures = new int[1];
+            textures = new int[2];
             GLES20.glGenTextures(textures.length, textures, 0);
             loadTexture(context.getResources().openRawResource(R.drawable.osb), textures[0]);
+            loadTexture(context.getResources().openRawResource(R.drawable.button), textures[1]);
         }
 
         { // orbit shader
@@ -288,6 +364,15 @@ public class MainRenderer extends GestureDetector.SimpleOnGestureListener implem
             GLES20.glAttachShader(orbit_program, vertex_shader_id);
             GLES20.glAttachShader(orbit_program, fragment_shader_id);
             GLES20.glLinkProgram(orbit_program);
+        }
+
+        { // button shader
+            int vertex_shader_id = loadShader(GLES20.GL_VERTEX_SHADER, context.getResources().getString(R.string.button_vertex_shader));
+            int fragment_shader_id = loadShader(GLES20.GL_FRAGMENT_SHADER, context.getResources().getString(R.string.button_fragment_shader));
+            button_program = GLES20.glCreateProgram();
+            GLES20.glAttachShader(button_program, vertex_shader_id);
+            GLES20.glAttachShader(button_program, fragment_shader_id);
+            GLES20.glLinkProgram(button_program);
         }
 
         { // main shader
@@ -309,19 +394,23 @@ public class MainRenderer extends GestureDetector.SimpleOnGestureListener implem
         Log.i("Orbit", String.format("surface changed %d %d", width, height));
         GLES20.glViewport(0, 0, width, height);
 
-        setProjection(main_program);
-        setProjection(orbit_program);
+        setProjection(main_program, true);
+        setProjection(orbit_program, true);
+        setProjection(button_program, false);
     }
 
-    public void setProjection(int program) {
+    public void setProjection(int program, boolean physical_referential) {
         GLES20.glUseProgram(program);
 
         int projection_uniform = GLES20.glGetUniformLocation(program, "uProjection");
         if (projection_uniform >= 0) {
             float projection_matrix[] = new float[16];
-            float mx = width / (float) Math.min(height, width);
-            float my = height / (float) Math.min(height, width);
-            Matrix.orthoM(projection_matrix, 0, -mx, mx, -my, my, -10, 10);
+            if (physical_referential) {
+                float mx = width / (float) Math.min(height, width);
+                float my = height / (float) Math.min(height, width);
+                Matrix.orthoM(projection_matrix, 0, -mx, mx, -my, my, -10, 10);
+            }
+            else Matrix.orthoM(projection_matrix, 0, 0, width, 0, height, -10, 10);
             assertStatus();
             GLES20.glUniformMatrix4fv(projection_uniform, 1, false, projection_matrix, 0);
         }
