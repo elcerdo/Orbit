@@ -46,6 +46,26 @@ public class MainActivity extends Activity {
 
     @Override
     public boolean onTouchEvent(MotionEvent evt) {
+        {
+            int pointer_up = evt.getActionMasked() == MotionEvent.ACTION_UP ? evt.getPointerId(evt.getActionIndex()) : -1;
+            boolean turn_left = false;
+            boolean turn_right = false;
+            boolean burn = false;
+            for (int kk = 0; kk < evt.getPointerCount(); kk++) {
+                int pointer = evt.getPointerId(kk);
+                if (pointer == pointer_up) continue;
+                float xx = evt.getX(kk);
+                float yy = mainRenderer.height - evt.getY(kk);
+                if (yy > mainRenderer.button_size) continue;
+                if (0 < xx && xx < mainRenderer.button_size) turn_left = true;
+                if (mainRenderer.button_size < xx && xx < 2*mainRenderer.button_size) turn_right = true;
+                if (mainRenderer.width-mainRenderer.button_size < xx && xx < mainRenderer.width) burn = true;
+            }
+            mainRenderer.turn_left = turn_left;
+            mainRenderer.turn_right = turn_right;
+            mainRenderer.burn = burn;
+        }
+
         return gestureDetector.onTouchEvent(evt);
     }
 

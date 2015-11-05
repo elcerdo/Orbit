@@ -51,8 +51,9 @@ public class MainRenderer extends GestureDetector.SimpleOnGestureListener implem
     private int textures[];
     private Context context;
 
-    private int width;
-    private int height;
+    public int width;
+    public int height;
+    public float button_size;
     private float sx;
     private float sy;
 
@@ -60,9 +61,9 @@ public class MainRenderer extends GestureDetector.SimpleOnGestureListener implem
     private float latus_rectum;
     private float initial_phase;
 
-    private boolean turn_left;
-    private boolean turn_right;
-    private boolean burn;
+    public boolean turn_left;
+    public boolean turn_right;
+    public boolean burn;
 
     public static FloatBuffer arrayToBuffer(float array[]) {
         ByteBuffer byte_buffer = ByteBuffer.allocateDirect(array.length * 4);
@@ -138,8 +139,9 @@ public class MainRenderer extends GestureDetector.SimpleOnGestureListener implem
         initial_phase = 0f;
         latus_rectum = .5f;
         turn_left = false;
-        turn_right = true;
+        turn_right = false;
         burn = false;
+        button_size = (float)context.getResources().getInteger(R.integer.button_size);
     }
 
     @Override
@@ -289,7 +291,6 @@ public class MainRenderer extends GestureDetector.SimpleOnGestureListener implem
             int color_uniform = GLES20.glGetUniformLocation(button_program, "uColor");
             int model_view_uniform = GLES20.glGetUniformLocation(button_program, "uModelView");
             int mode_uniform = GLES20.glGetUniformLocation(button_program, "uMode");
-            float button_size = (float)context.getResources().getInteger(R.integer.button_size);
 
             GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textures[1]);
 
