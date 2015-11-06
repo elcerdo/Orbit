@@ -23,6 +23,7 @@
     <string name="orbit_fragment_shader">
         precision highp float;
         uniform vec4 uColor;
+        uniform float uMu;
         uniform float uTime;
         varying vec4 vPosition;
         varying float vPhase;

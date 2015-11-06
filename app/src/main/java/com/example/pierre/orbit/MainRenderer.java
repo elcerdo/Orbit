@@ -255,16 +255,19 @@ public class MainRenderer extends GestureDetector.SimpleOnGestureListener implem
             int time_uniform = GLES20.glGetUniformLocation(orbit_program, "uTime");
             int tap_uniform = GLES20.glGetUniformLocation(orbit_program, "uTap");
             int orbit_uniform = GLES20.glGetUniformLocation(orbit_program, "uOrbit");
+            int mu_uniform = GLES20.glGetUniformLocation(orbit_program, "uMu");
 
             float radius = (float)Math.sqrt(sx*sx+sy*sy);
             initial_phase = (float)Math.atan2(sy, sx);
             eccentricity = latus_rectum/radius-1;
-            float mu = 1;
-            float orbital_energy = (eccentricity*eccentricity-1)/latus_rectum;
+            float mu = 10;
+            float orbital_energy = mu*(eccentricity*eccentricity-1)/latus_rectum;
+            float moment = (float)Math.sqrt(mu*latus_rectum);
             //Log.i("Orbit", "e=" + orbital_energy);
             GLES20.glUniform1f(time_uniform, current_time);
             GLES20.glUniform2f(tap_uniform, sx, sy);
             GLES20.glUniform3f(orbit_uniform, latus_rectum, eccentricity, initial_phase);
+            GLES20.glUniform1f(mu_uniform, mu);
 
             float model_view_matrix[] = new float[16];
             Matrix.setIdentityM(model_view_matrix, 0);
